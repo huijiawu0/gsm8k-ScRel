@@ -142,5 +142,5 @@ def eval_majority_voting(folder, max_cnt=100):
     return pred_ans
 
 if __name__ == "__main__":
-
-    eval_json('./ckpts/gsm8k_sft_llama7b/raw_generation_greedy.json', 'test')
+    import sys
+    eval_json(sys.argv[1], 'test')
