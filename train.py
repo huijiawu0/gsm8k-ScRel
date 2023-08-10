@@ -26,10 +26,12 @@ from transformers import Trainer
 
 import json
 
+
 def _make_r_io_base(f, mode: str):
     if not isinstance(f, io.IOBase):
         f = open(f, mode=mode)
     return f
+
 
 def jload(f, mode="r"):
     """Load a .json file into a dictionary."""
@@ -37,6 +39,7 @@ def jload(f, mode="r"):
     jdict = json.load(f)
     f.close()
     return jdict
+
 
 IGNORE_INDEX = -100
 DEFAULT_PAD_TOKEN = "[PAD]"
@@ -88,9 +91,9 @@ def safe_save_model_for_hf_trainer(trainer: transformers.Trainer, output_dir: st
 
 
 def smart_tokenizer_and_embedding_resize(
-    special_tokens_dict: Dict,
-    tokenizer: transformers.PreTrainedTokenizer,
-    model: transformers.PreTrainedModel,
+        special_tokens_dict: Dict,
+        tokenizer: transformers.PreTrainedTokenizer,
+        model: transformers.PreTrainedModel,
 ):
     """Resize tokenizer and embedding.
 
@@ -98,14 +101,14 @@ def smart_tokenizer_and_embedding_resize(
     """
     num_new_tokens = tokenizer.add_special_tokens(special_tokens_dict)
     model.resize_token_embeddings(len(tokenizer))
-
+    
     if num_new_tokens > 0:
         input_embeddings = model.get_input_embeddings().weight.data
         output_embeddings = model.get_output_embeddings().weight.data
-
+        
         input_embeddings_avg = input_embeddings[:-num_new_tokens].mean(dim=0, keepdim=True)
         output_embeddings_avg = output_embeddings[:-num_new_tokens].mean(dim=0, keepdim=True)
-
+        
         input_embeddings[-num_new_tokens:] = input_embeddings_avg
         output_embeddings[-num_new_tokens:] = output_embeddings_avg
 
@@ -135,9 +138,9 @@ def _tokenize_fn(strings: Sequence[str], tokenizer: transformers.PreTrainedToken
 
 
 def preprocess(
-    sources: Sequence[str],
-    targets: Sequence[str],
-    tokenizer: transformers.PreTrainedTokenizer,
+        sources: Sequence[str],
+        targets: Sequence[str],
+        tokenizer: transformers.PreTrainedTokenizer,
 ) -> Dict:
     """Preprocess the data by tokenizing."""
     examples = [s + t for s, t in zip(sources, targets)]
@@ -151,7 +154,7 @@ def preprocess(
 
 class SupervisedDataset(Dataset):
     """Dataset for supervised fine-tuning."""
-
+    
     def __init__(self, data_path: str, tokenizer: transformers.PreTrainedTokenizer):
         super(SupervisedDataset, self).__init__()
         logging.warning("Loading data...")
@@ -161,7 +164,7 @@ class SupervisedDataset(Dataset):
             with open(data_path, 'r') as f:
                 lines = f.readlines()
             list_data_dict = [json.loads(line.strip()) for line in lines]
-
+        
         # logging.warning("Formatting inputs...")
         prompt_input, prompt_no_input = PROMPT_DICT["prompt_input"], PROMPT_DICT["prompt_no_input"]
         # print(list_data_dict[0])
@@ -172,38 +175,43 @@ class SupervisedDataset(Dataset):
                 if query.find('\n') == -1:
                     return ''
                 return '\n'.join(query.split('\n')[1:])
-            list_data_dict = [{'instruction':data['query'].split('\n')[0], 'input':get_input(data['query']), 'output':data['response']} for data in list_data_dict]
+            
+            list_data_dict = [{'instruction': data['query'].split('\n')[0],
+                               'input': get_input(data['query']),
+                               'output': '%s\n#### %s' % (data['response'], data['answer'])}
+                              for data in list_data_dict]
         # import ipdb; ipdb.set_trace()
         sources = [
             prompt_input.format_map(example) if example.get("input", "") != "" else prompt_no_input.format_map(example)
             for example in list_data_dict
         ]
         targets = [f"{example['output']}{tokenizer.eos_token}" for example in list_data_dict]
-
+        
         self.sources = sources
         self.targets = targets
-
+        
         # logging.warning("Tokenizing inputs... This may take some time...")
         # data_dict = preprocess(sources, targets, tokenizer)
-
+        
         # self.input_ids = data_dict["input_ids"]
         # self.labels = data_dict["labels"]
-
+    
     def __len__(self):
         return len(self.sources)
-
+    
     def naive__getitem__(self, i) -> Dict[str, torch.Tensor]:
         return dict(input_ids=self.input_ids[i], labels=self.labels[i])
-
+    
     def __getitem__(self, i):
         return dict(input_ids=self.sources[i], labels=self.targets[i])
+
 
 @dataclass
 class DataCollatorForSupervisedDataset(object):
     """Collate examples for supervised fine-tuning."""
-
+    
     tokenizer: transformers.PreTrainedTokenizer
-
+    
     def naive__call__(self, instances: Sequence[Dict]) -> Dict[str, torch.Tensor]:
         input_ids, labels = tuple([instance[key] for instance in instances] for key in ("input_ids", "labels"))
         input_ids = torch.nn.utils.rnn.pad_sequence(
@@ -215,7 +223,7 @@ class DataCollatorForSupervisedDataset(object):
             labels=labels,
             attention_mask=input_ids.ne(self.tokenizer.pad_token_id),
         )
-
+    
     def __call__(self, instances: Sequence[Dict]) -> Dict[str, torch.Tensor]:
         sources = []
         targets = []
@@ -224,7 +232,7 @@ class DataCollatorForSupervisedDataset(object):
             target = instance['labels']
             sources.append(source)
             targets.append(target)
-
+        
         data_dict = preprocess(sources, targets, self.tokenizer)
         input_ids, labels = data_dict['input_ids'], data_dict['labels']
         # input_ids, labels = tuple([instance[key] for instance in instances] for key in ("input_ids", "labels"))
@@ -238,6 +246,7 @@ class DataCollatorForSupervisedDataset(object):
             attention_mask=input_ids.ne(self.tokenizer.pad_token_id),
         )
 
+
 def make_supervised_data_module(tokenizer: transformers.PreTrainedTokenizer, data_args) -> Dict:
     """Make dataset and collator for supervised fine-tuning."""
     train_dataset = SupervisedDataset(tokenizer=tokenizer, data_path=data_args.data_path)
@@ -248,18 +257,18 @@ def make_supervised_data_module(tokenizer: transformers.PreTrainedTokenizer, dat
 def train():
     parser = transformers.HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
-
+    
     # if os.path.isdir(training_args.output_dir):
     #     last_checkpoint = get_last_checkpoint(training_args.output_dir)
     # else:
     #     last_checkpoint = None
     # print(last_checkpoint)
-
+    
     model = transformers.AutoModelForCausalLM.from_pretrained(
         model_args.model_name_or_path,
         cache_dir=training_args.cache_dir,
     )
-
+    
     tokenizer = transformers.AutoTokenizer.from_pretrained(
         model_args.model_name_or_path,
         cache_dir=training_args.cache_dir,
@@ -281,7 +290,7 @@ def train():
             "unk_token": DEFAULT_UNK_TOKEN,
         }
     )
-
+    
     data_module = make_supervised_data_module(tokenizer=tokenizer, data_args=data_args)
     trainer = Trainer(model=model, tokenizer=tokenizer, args=training_args, **data_module)
     trainer.train()
