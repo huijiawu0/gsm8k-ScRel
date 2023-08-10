@@ -261,7 +261,7 @@ def train():
     )
 
     tokenizer = transformers.AutoTokenizer.from_pretrained(
-        'llama_model_hf/llama-7b',
+        model_args.model_name_or_path,
         cache_dir=training_args.cache_dir,
         model_max_length=training_args.model_max_length,
         padding_side="right",
