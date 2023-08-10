@@ -8,4 +8,4 @@ torchrun --nproc_per_node 2 --master_port 7834 test.py \
                         --base_model $MODEL_DIR \
                         --data_path "./data/test_use.jsonl" \
                         --out_path $OUT_DIR \
-                        --batch_size 6
+                        --batch_size 64
