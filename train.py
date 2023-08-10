@@ -17,6 +17,7 @@ import os
 import copy
 import logging
 from dataclasses import dataclass, field
+from json import JSONDecodeError
 from typing import Optional, Dict, Sequence
 import io
 import torch
@@ -163,8 +164,14 @@ class SupervisedDataset(Dataset):
         except BaseException:
             with open(data_path, 'r') as f:
                 lines = f.readlines()
-            list_data_dict = [json.loads(line.strip()) for line in lines]
-        
+            list_data_dict = []
+            for idx, line in enumerate(lines):
+                try:
+                    list_data_dict.append(json.loads(line.strip()))
+                except JSONDecodeError:
+                    print(idx, line)
+                    continue
+
         # logging.warning("Formatting inputs...")
         prompt_input, prompt_no_input = PROMPT_DICT["prompt_input"], PROMPT_DICT["prompt_no_input"]
         # print(list_data_dict[0])
