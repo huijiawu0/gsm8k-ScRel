@@ -5,15 +5,15 @@ export MASTER_PORT="1231"
 export WANDB_DISABLED=true
 wandb offline
 
-CUDA_VISIBLE_DEVICES=0 python3 -m torch.distributed.launch --master_addr ${MASTER_ADDR} --master_port ${MASTER_PORT} --nproc_per_node=1 --use_env train.py \
+CUDA_VISIBLE_DEVICES=0,1 python3 -m torch.distributed.launch --master_addr ${MASTER_ADDR} --master_port ${MASTER_PORT} --nproc_per_node=2 --use_env train.py \
     --model_name_or_path $MODEL_PATH \
     --data_path $2 \
     --bf16 True \
     --output_dir $SAVE_PATH \
     --num_train_epochs 1 \
-    --per_device_train_batch_size 32 \
-    --per_device_eval_batch_size 32 \
-    --gradient_accumulation_steps 4 \
+    --per_device_train_batch_size 64 \
+    --per_device_eval_batch_size 64 \
+    --gradient_accumulation_steps 8 \
     --evaluation_strategy "no" \
     --save_strategy "steps" \
     --save_steps 50000 \
