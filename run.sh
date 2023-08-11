@@ -10,7 +10,7 @@ CUDA_VISIBLE_DEVICES=0,1 python3 -m torch.distributed.launch --master_addr ${MAS
     --data_path $2 \
     --bf16 True \
     --output_dir $SAVE_PATH \
-    --num_train_epochs 1 \
+    --num_train_epochs 3 \
     --per_device_train_batch_size 64 \
     --per_device_eval_batch_size 64 \
     --gradient_accumulation_steps 8 \
