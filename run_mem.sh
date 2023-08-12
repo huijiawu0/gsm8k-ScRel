@@ -28,4 +28,5 @@ CUDA_VISIBLE_DEVICES=0,1 python3 -m torch.distributed.launch --master_addr ${MAS
     --tf32 True \
     --gradient_checkpointing True \
     --model_max_length 1024 \
-    --dataloader_num_workers 4
+    --dataloader_num_workers 4 \
+    --cache_dir '/workspace'
