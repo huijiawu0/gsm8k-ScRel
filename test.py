@@ -14,6 +14,7 @@ import json
 
 from tqdm import tqdm
 import copy
+
 IGNORE_INDEX = -100
 DEFAULT_PAD_TOKEN = "[PAD]"
 DEFAULT_EOS_TOKEN = "</s>"
@@ -32,10 +33,11 @@ PROMPT_DICT = {
     ),
 }
 
+
 def smart_tokenizer_and_embedding_resize(
-    special_tokens_dict: Dict,
-    tokenizer: transformers.PreTrainedTokenizer,
-    model: transformers.PreTrainedModel,
+        special_tokens_dict: Dict,
+        tokenizer: transformers.PreTrainedTokenizer,
+        model: transformers.PreTrainedModel,
 ):
     """Resize tokenizer and embedding.
 
@@ -43,14 +45,14 @@ def smart_tokenizer_and_embedding_resize(
     """
     num_new_tokens = tokenizer.add_special_tokens(special_tokens_dict)
     model.resize_token_embeddings(len(tokenizer))
-
+    
     if num_new_tokens > 0:
         input_embeddings = model.get_input_embeddings().weight.data
         output_embeddings = model.get_output_embeddings().weight.data
-
+        
         input_embeddings_avg = input_embeddings[:-num_new_tokens].mean(dim=0, keepdim=True)
         output_embeddings_avg = output_embeddings[:-num_new_tokens].mean(dim=0, keepdim=True)
-
+        
         input_embeddings[-num_new_tokens:] = input_embeddings_avg
         output_embeddings[-num_new_tokens:] = output_embeddings_avg
 
@@ -80,9 +82,9 @@ def _tokenize_fn(strings, tokenizer: transformers.PreTrainedTokenizer):
 
 
 def preprocess(
-    sources,
-    targets,
-    tokenizer: transformers.PreTrainedTokenizer,
+        sources,
+        targets,
+        tokenizer: transformers.PreTrainedTokenizer,
 ):
     sources_tokenized = _tokenize_fn(sources, tokenizer)
     input_ids = sources_tokenized["input_ids"]
@@ -91,31 +93,31 @@ def preprocess(
 
 class SupervisedDataset(Dataset):
     """Dataset for supervised fine-tuning."""
-
+    
     def __init__(self, data_path: str, tokenizer: transformers.PreTrainedTokenizer):
         super(SupervisedDataset, self).__init__()
-
+        
         # dataset_for_eval = load_dataset(data_path)['train']
-
-
+        
         with open(data_path, 'r') as f:
             dataset_for_eval = f.readlines()
-
+        
         dataset_for_eval = [json.loads(item.strip()) for item in dataset_for_eval]
         sources = [PROMPT_DICT["prompt_no_input"].format_map(item) for item in dataset_for_eval]
         targets = [item['response'] for item in dataset_for_eval]
         data_dict = preprocess(sources, targets, tokenizer)
-
+        
         self.input_ids = data_dict["input_ids"] + data_dict["input_ids"][-100:]
         self.labels = data_dict["labels"] + data_dict["labels"][-100:]
-
+    
     def __len__(self):
         return len(self.input_ids)
-
+    
     def __getitem__(self, i) -> Dict[str, torch.Tensor]:
         return dict(input_ids=self.input_ids[i], labels=self.labels[i], id=i)
 
-def padding(inputs, padding_token, cutoff = None):
+
+def padding(inputs, padding_token, cutoff=None):
     num_elems = len(inputs)
     if cutoff is None:
         cutoff = max([len(item) for item in inputs])
@@ -128,6 +130,7 @@ def padding(inputs, padding_token, cutoff = None):
         tokens[i, -length:] = toks[-length:]
     return tokens
 
+
 def sequence_gather(s, world_size, pad_tok_id):
     local_size = torch.tensor(s.size(), device=s.device)
     all_sizes = [torch.zeros_like(local_size) for _ in range(world_size)]
@@ -137,23 +140,25 @@ def sequence_gather(s, world_size, pad_tok_id):
     if length_diff:
         pad_size = (*s.shape[:-1], length_diff)
         padding = torch.ones(pad_size, device=s.device, dtype=s.dtype) * pad_tok_id
-        s = torch.concat((s, padding), dim = -1)
-    gathered_s = [torch.ones_like(s)*pad_tok_id for _ in range(world_size)]
+        s = torch.concat((s, padding), dim=-1)
+    gathered_s = [torch.ones_like(s) * pad_tok_id for _ in range(world_size)]
     dist.all_gather(gathered_s, s)
-
+    
     return gathered_s
+
 
 @dataclass
 class DataCollatorForSupervisedDataset(object):
     """Collate examples for supervised fine-tuning."""
-
+    
     tokenizer: transformers.PreTrainedTokenizer
-
+    
     def __call__(self, instances: Sequence[Dict]) -> Dict[str, torch.Tensor]:
-        input_ids, labels, ids = tuple([instance[key] for instance in instances] for key in ("input_ids", "labels", 'id'))
-        input_ids = padding(input_ids, self.tokenizer.pad_token_id, cutoff = 256)
-        labels = padding(labels, IGNORE_INDEX, cutoff = 256)
-
+        input_ids, labels, ids = tuple(
+            [instance[key] for instance in instances] for key in ("input_ids", "labels", 'id'))
+        input_ids = padding(input_ids, self.tokenizer.pad_token_id, cutoff=512)
+        labels = padding(labels, IGNORE_INDEX, cutoff=512)
+        
         return dict(
             input_ids=input_ids,
             labels=labels,
@@ -170,21 +175,20 @@ def make_supervised_data_module(tokenizer: transformers.PreTrainedTokenizer, dat
 
 
 def main(rank, args):
-
     dist.init_process_group("nccl")
     world_size = torch.cuda.device_count()
     base_model = args.base_model
     data_path = args.data_path
     batch_size = args.batch_size
-
+    
     model = LlamaForCausalLM.from_pretrained(
-            base_model,
-            torch_dtype=torch.bfloat16,
-        )
-
+        base_model,
+        torch_dtype=torch.bfloat16,
+    )
+    
     tokenizer = transformers.AutoTokenizer.from_pretrained(base_model)
     print(tokenizer.pad_token)
-
+    
     if tokenizer.pad_token is None:
         smart_tokenizer_and_embedding_resize(
             special_tokens_dict=dict(pad_token=DEFAULT_PAD_TOKEN),
@@ -200,21 +204,22 @@ def main(rank, args):
             }
         )
     tokenizer.truncation_side = 'left'
-
+    
     torch.cuda.set_device(rank)
     model.to(torch.cuda.current_device())
     model = DDP(model, device_ids=[torch.cuda.current_device()])
     model.eval()
-
+    
     eval_dataset, data_collator = make_supervised_data_module(tokenizer, data_path)
     # dataset_for_eval = load_dataset(data_path)['train']
     return_seq_num = 1
     for tempera in [0.7]:
-        sampler = torch.utils.data.distributed.DistributedSampler(eval_dataset, num_replicas=world_size, rank=rank, shuffle=False)
+        sampler = torch.utils.data.distributed.DistributedSampler(eval_dataset, num_replicas=world_size, rank=rank,
+                                                                  shuffle=False)
         dataloader = DataLoader(
-            eval_dataset, 
-            shuffle=False, 
-            collate_fn=data_collator, 
+            eval_dataset,
+            shuffle=False,
+            collate_fn=data_collator,
             batch_size=batch_size,
             sampler=sampler,
             drop_last=True,
@@ -227,7 +232,7 @@ def main(rank, args):
                 num_beams=return_seq_num,
                 num_beam_groups=args.diverse_beam,
                 diversity_penalty=1.0,
-                max_new_tokens=256,
+                max_new_tokens=512,
                 num_return_sequences=return_seq_num,
             )
         else:
@@ -235,7 +240,7 @@ def main(rank, args):
                 temperature=tempera,
                 do_sample=args.do_sample,
                 num_beams=return_seq_num,
-                max_new_tokens=256,
+                max_new_tokens=512,
                 num_return_sequences=return_seq_num,
             )
         all_outputs = []
@@ -254,14 +259,14 @@ def main(rank, args):
                     return_dict_in_generate=True,
                 )
             s = generation_output.sequences
-            #if rank == 0:
-                #print(s)
+            # if rank == 0:
+            # print(s)
             gather_outputs = sequence_gather(s, world_size, tokenizer.pad_token_id)
             gathered_inputs = sequence_gather(input_ids, world_size, tokenizer.pad_token_id)
-            gather_outputs = torch.stack(gather_outputs).reshape(world_size, batch_size,return_seq_num,-1)
+            gather_outputs = torch.stack(gather_outputs).reshape(world_size, batch_size, return_seq_num, -1)
             gathered_inputs = torch.stack(gathered_inputs)
-            gather_outputs = gather_outputs.transpose(0,1).reshape(batch_size*world_size*return_seq_num, -1)
-            gathered_inputs = gathered_inputs.transpose(0,1).reshape(batch_size*world_size,-1)
+            gather_outputs = gather_outputs.transpose(0, 1).reshape(batch_size * world_size * return_seq_num, -1)
+            gathered_inputs = gathered_inputs.transpose(0, 1).reshape(batch_size * world_size, -1)
             outputs_string = tokenizer.batch_decode(gather_outputs, skip_special_tokens=True)
             inputs_string = tokenizer.batch_decode(gathered_inputs, skip_special_tokens=True)
             # if rank == 0: 
@@ -275,7 +280,8 @@ def main(rank, args):
             for idx in range(len(inputs_string)):
                 temp = []
                 for i in range(return_seq_num):
-                    temp.append([inputs_string[idx], outputs_string[return_seq_num*idx+i].replace(inputs_string[idx], '')])
+                    temp.append(
+                        [inputs_string[idx], outputs_string[return_seq_num * idx + i].replace(inputs_string[idx], '')])
                 # if rank ==0:
                 #     print(temp)
                 # input()
@@ -285,10 +291,10 @@ def main(rank, args):
             import json
             with open(args.out_path + f'/raw_generation_greedy.json', 'w') as f:
                 for item in all_outputs:
-                    f.write(json.dumps(item[:1319]) + '\n')
+                    f.write(json.dumps(item) + '\n')
                     # json.dump(all_outputs[:len(eval_dataset)], f)
         dist.barrier()
- 
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Parameters')
@@ -301,6 +307,6 @@ if __name__ == "__main__":
     parser.add_argument("--out_path", default="", type=str, help="config path")
     parser.add_argument("--do_sample", default=False, type=bool, help="config path")
     args = parser.parse_args()
-
+    
     local_rank = int(os.environ["LOCAL_RANK"])
     main(local_rank, args)
