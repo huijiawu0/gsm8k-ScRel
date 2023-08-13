@@ -199,7 +199,6 @@ if __name__ == '__main__':
         print("Max sequence length in this batch:", input_ids.size(1))
         total.append(input_ids.size(1))
         total1.append(labels.size(1))
-        print(input_ids, labels)
         # print("Attention Mask:", attention_mask)
         print("----------")
     
