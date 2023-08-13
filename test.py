@@ -18,17 +18,13 @@ import copy
 IGNORE_INDEX = -100
 DEFAULT_PAD_TOKEN = "[PAD]"
 DEFAULT_EOS_TOKEN = "</s>"
-DEFAULT_BOS_TOKEN = "</s>"
-DEFAULT_UNK_TOKEN = "</s>"
+DEFAULT_BOS_TOKEN = "<s>"
+DEFAULT_UNK_TOKEN = "<unk>"
 PROMPT_DICT = {
     "prompt_input": (
-        "Below is an instruction that describes a task, paired with an input that provides further context. "
-        "Write a response that appropriately completes the request.\n\n"
         "### Instruction:\n{instruction}\n\n### Input:\n{input}\n\n### Response:"
     ),
     "prompt_no_input": (
-        "Below is an instruction that describes a task. "
-        "Write a response that appropriately completes the request.\n\n"
         "### Instruction:\n{query}\n\n### Response:"
     ),
 }
@@ -188,6 +184,7 @@ def main(rank, args):
     
     tokenizer = transformers.AutoTokenizer.from_pretrained(base_model)
     print(tokenizer.pad_token)
+    print(tokenizer.model_max_length)
     
     if tokenizer.pad_token is None:
         smart_tokenizer_and_embedding_resize(

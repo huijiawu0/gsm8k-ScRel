@@ -181,7 +181,7 @@ class SupervisedDataset(Dataset):
             
             list_data_dict = [{'instruction': data['query'].split('\n')[0],
                                'input': get_input(data['query']),
-                               'output': '%s\n#### %s' % (data['response'], data['answer'])}
+                               'output': '%s ####\n%s' % (data['answer'], data['response'])}
                               for data in list_data_dict]
         # import ipdb; ipdb.set_trace()
         sources = [
