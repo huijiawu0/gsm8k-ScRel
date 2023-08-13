@@ -174,6 +174,7 @@ if __name__ == '__main__':
         padding_side="right",
         use_fast=False,
     )
+    print(tokenizer.truncation_side)
     special_tokens_dict = dict()
     if tokenizer.pad_token is None:
         special_tokens_dict["pad_token"] = DEFAULT_PAD_TOKEN
