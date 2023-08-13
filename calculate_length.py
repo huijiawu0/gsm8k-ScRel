@@ -42,17 +42,10 @@ class SupervisedDataset(Dataset):
             with open(data_path, 'r') as f:
                 lines = f.readlines()
             list_data_dict = []
-            list_data_length = []
             for idx, line in enumerate(lines):
                 try:
                     data_item = json.loads(line.strip())
                     list_data_dict.append(data_item)
-        
-                    # Tokenize and print the length
-                    tokenized_length = len(tokenizer.encode(data_item['query']))
-                    list_data_length.append(tokenized_length)
-                    print(f"Line {idx} has a tokenized length of: {tokenized_length}")
-    
                 except JSONDecodeError:
                     print(idx, line)
                     continue
