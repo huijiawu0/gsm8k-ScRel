@@ -1,11 +1,11 @@
 export MODEL_PATH=$1
 export SAVE_PATH=$3
 export MASTER_ADDR="localhost"
-export MASTER_PORT="1231"
+export MASTER_PORT="1232"
 export WANDB_DISABLED=true
 wandb offline
 
-CUDA_VISIBLE_DEVICES=0,1 python3 -m torch.distributed.launch --master_addr ${MASTER_ADDR} --master_port ${MASTER_PORT} --nproc_per_node=2 --use_env train.py \
+CUDA_VISIBLE_DEVICES=2,3 python3 -m torch.distributed.launch --master_addr ${MASTER_ADDR} --master_port ${MASTER_PORT} --nproc_per_node=2 --use_env train2.py \
     --model_name_or_path $MODEL_PATH \
     --data_path $2 \
     --bf16 True \
