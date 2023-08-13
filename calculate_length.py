@@ -99,19 +99,11 @@ def preprocess(
 ) -> Dict:
     """Preprocess the data by tokenizing."""
     examples = [s + t for s, t in zip(sources, targets)]
-    print(len(examples))
-    print(examples[0])
     examples_tokenized, sources_tokenized = [_tokenize_fn(strings, tokenizer) for strings in (examples, sources)]
     input_ids = examples_tokenized["input_ids"]
     labels = copy.deepcopy(input_ids)
     for input_id, label, source_len in zip(input_ids, labels, sources_tokenized["input_ids_lens"]):
         label[:source_len] = IGNORE_INDEX
-        print(examples_tokenized["input_ids_lens"])
-        print(examples_tokenized["labels_lens"])
-        print(sources_tokenized["input_ids_lens"])
-        print(sources_tokenized["labels_lens"])
-        print(input_id, input_id.shape, label, label.shape, source_len)
-        sys.exit(1)
     return dict(input_ids=input_ids, labels=labels)
 
 
