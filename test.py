@@ -291,6 +291,7 @@ def main(rank, args):
             import json
             with open(args.out_path + f'/raw_generation_greedy.json', 'w') as f:
                 for item in all_outputs:
+                    print(item[1319:])
                     f.write(json.dumps(item[:1319]) + '\n')
                     # json.dump(all_outputs[:len(eval_dataset)], f)
         dist.barrier()
