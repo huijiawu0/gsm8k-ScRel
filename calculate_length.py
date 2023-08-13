@@ -178,7 +178,7 @@ if __name__ == '__main__':
         special_tokens_dict["unk_token"] = DEFAULT_UNK_TOKEN
 
     num_new_tokens = tokenizer.add_special_tokens(special_tokens_dict)
-    print("tokenizer num_new_tokens: %d/%d" % (num_new_tokens, len(tokenizer)))
+    print("tokenizer num_new_tokens: %d, total tokens: %d" % (num_new_tokens, len(tokenizer)))
     print("model_max_length", tokenizer.model_max_length)
     data_module = make_supervised_data_module(tokenizer=tokenizer, data_args=data_args)
     train_dataset = data_module['train_dataset']
