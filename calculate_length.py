@@ -1,3 +1,4 @@
+import copy
 import json
 import logging
 from dataclasses import dataclass
@@ -8,7 +9,7 @@ import torch
 import transformers
 from torch.utils.data import Dataset, DataLoader
 
-from train import jload, preprocess, TrainingArguments, DataArguments, ModelArguments
+from train import jload, preprocess, TrainingArguments, DataArguments, ModelArguments, _tokenize_fn
 
 IGNORE_INDEX = -100
 DEFAULT_PAD_TOKEN = "[PAD]"
@@ -88,6 +89,23 @@ class SupervisedDataset(Dataset):
     
     def __getitem__(self, i):
         return dict(input_ids=self.sources[i], labels=self.targets[i])
+
+
+def preprocess(
+        sources: Sequence[str],
+        targets: Sequence[str],
+        tokenizer: transformers.PreTrainedTokenizer,
+) -> Dict:
+    """Preprocess the data by tokenizing."""
+    examples = [s + t for s, t in zip(sources, targets)]
+    print(examples)
+    examples_tokenized, sources_tokenized = [_tokenize_fn(strings, tokenizer) for strings in (examples, sources)]
+    print(examples_tokenized[0], sources_tokenized[0])
+    input_ids = examples_tokenized["input_ids"]
+    labels = copy.deepcopy(input_ids)
+    for label, source_len in zip(labels, sources_tokenized["input_ids_lens"]):
+        label[:source_len] = IGNORE_INDEX
+    return dict(input_ids=input_ids, labels=labels)
 
 
 @dataclass
