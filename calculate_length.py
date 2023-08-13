@@ -179,7 +179,7 @@ if __name__ == '__main__':
 
     num_new_tokens = tokenizer.add_special_tokens(special_tokens_dict)
     print("tokenizer num_new_tokens: %d/%d" % (num_new_tokens, len(tokenizer)))
-    
+    print("model_max_length", tokenizer.model_max_length)
     data_module = make_supervised_data_module(tokenizer=tokenizer, data_args=data_args)
     train_dataset = data_module['train_dataset']
     data_collator = data_module['data_collator']
@@ -195,8 +195,6 @@ if __name__ == '__main__':
         labels = batch['labels']
         attention_mask = batch['attention_mask']
     
-        print("Batch size:", input_ids.size(0))
-        print("Max sequence length in this batch:", input_ids.size(1))
         total.append(input_ids.size(1))
         total1.append(labels.size(1))
         # print("Attention Mask:", attention_mask)
