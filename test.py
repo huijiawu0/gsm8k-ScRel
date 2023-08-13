@@ -156,8 +156,8 @@ class DataCollatorForSupervisedDataset(object):
     def __call__(self, instances: Sequence[Dict]) -> Dict[str, torch.Tensor]:
         input_ids, labels, ids = tuple(
             [instance[key] for instance in instances] for key in ("input_ids", "labels", 'id'))
-        input_ids = padding(input_ids, self.tokenizer.pad_token_id, cutoff=512)
-        labels = padding(labels, IGNORE_INDEX, cutoff=512)
+        input_ids = padding(input_ids, self.tokenizer.pad_token_id, cutoff=256)
+        labels = padding(labels, IGNORE_INDEX, cutoff=256)
         
         return dict(
             input_ids=input_ids,
@@ -232,7 +232,7 @@ def main(rank, args):
                 num_beams=return_seq_num,
                 num_beam_groups=args.diverse_beam,
                 diversity_penalty=1.0,
-                max_new_tokens=512,
+                max_new_tokens=256,
                 num_return_sequences=return_seq_num,
             )
         else:
@@ -240,7 +240,7 @@ def main(rank, args):
                 temperature=tempera,
                 do_sample=args.do_sample,
                 num_beams=return_seq_num,
-                max_new_tokens=512,
+                max_new_tokens=256,
                 num_return_sequences=return_seq_num,
             )
         all_outputs = []
@@ -291,7 +291,7 @@ def main(rank, args):
             import json
             with open(args.out_path + f'/raw_generation_greedy.json', 'w') as f:
                 for item in all_outputs:
-                    f.write(json.dumps(item) + '\n')
+                    f.write(json.dumps(item[:1319]) + '\n')
                     # json.dump(all_outputs[:len(eval_dataset)], f)
         dist.barrier()
 
