@@ -1,6 +1,7 @@
 import copy
 import json
 import logging
+import sys
 from dataclasses import dataclass
 from json import JSONDecodeError
 from typing import Dict, Sequence
@@ -98,13 +99,15 @@ def preprocess(
 ) -> Dict:
     """Preprocess the data by tokenizing."""
     examples = [s + t for s, t in zip(sources, targets)]
-    print(len(examples), examples[0])
+    print(len(examples))
+    print(examples[0])
     examples_tokenized, sources_tokenized = [_tokenize_fn(strings, tokenizer) for strings in (examples, sources)]
     input_ids = examples_tokenized["input_ids"]
     labels = copy.deepcopy(input_ids)
-    print(input_ids.size, labels.size)
-    for label, source_len in zip(labels, sources_tokenized["input_ids_lens"]):
+    for input_id, label, source_len in zip(input_ids, labels, sources_tokenized["input_ids_lens"]):
         label[:source_len] = IGNORE_INDEX
+        print(input_id, label, source_len)
+        sys.exit(1)
     return dict(input_ids=input_ids, labels=labels)
 
 
