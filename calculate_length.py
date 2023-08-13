@@ -190,7 +190,8 @@ if __name__ == '__main__':
     model_max_length = training_args.model_max_length
     total = []
     total1 = []
-    for batch in dataloader:
+    from tqdm import tqdm
+    for batch in tqdm(dataloader):
         input_ids = batch['input_ids']
         labels = batch['labels']
         attention_mask = batch['attention_mask']
