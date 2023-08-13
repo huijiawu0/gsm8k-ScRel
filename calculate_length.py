@@ -197,8 +197,6 @@ if __name__ == '__main__':
     
         total.append(input_ids.size(1))
         total1.append(labels.size(1))
-        # print("Attention Mask:", attention_mask)
-        print("----------")
-    
+        
     print(sum(t == model_max_length for t in total))
     print(sum(t == model_max_length for t in total1))
