@@ -43,7 +43,7 @@ def parse_gold(lines):
     all_ans = []
     for line in lines:
         try:
-            ans = extract_answer2(json.loads(line)['response'])
+            ans = extract_answer(json.loads(line)['response'])
         except BaseException:
             print(line)
             ans = extract_answer(json.loads(line)['answer'])
@@ -55,7 +55,7 @@ def parse(lines):
     all_ans = []
     for line in lines:
         try:
-            ans = extract_answer(json.loads(line)[0][1])
+            ans = extract_answer2(json.loads(line)[0][1])
         except BaseException:
             ans = extract_answer(json.loads(line)['gen'][0])
         all_ans.append(ans)
