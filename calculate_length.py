@@ -107,9 +107,9 @@ def preprocess(
     for input_id, label, source_len in zip(input_ids, labels, sources_tokenized["input_ids_lens"]):
         label[:source_len] = IGNORE_INDEX
         print(examples_tokenized["input_ids_lens"])
-        print(examples_tokenized["label_lens"])
+        print(examples_tokenized["labels_lens"])
         print(sources_tokenized["input_ids_lens"])
-        print(sources_tokenized["label_lens"])
+        print(sources_tokenized["labels_lens"])
         print(input_id, input_id.shape, label, label.shape, source_len)
         sys.exit(1)
     return dict(input_ids=input_ids, labels=labels)
