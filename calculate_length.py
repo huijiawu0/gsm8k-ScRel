@@ -6,8 +6,7 @@ from typing import Dict, Sequence
 
 import torch
 import transformers
-from datasets import Dataset
-from torch.utils.data import DataLoader
+from torch.utils.data import Dataset, DataLoader
 
 from train import jload, preprocess, TrainingArguments, DataArguments, ModelArguments
 
