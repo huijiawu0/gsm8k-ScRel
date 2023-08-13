@@ -42,14 +42,22 @@ class SupervisedDataset(Dataset):
             with open(data_path, 'r') as f:
                 lines = f.readlines()
             list_data_dict = []
+            num_max_length = 0
             for idx, line in enumerate(lines):
                 try:
                     data_item = json.loads(line.strip())
                     list_data_dict.append(data_item)
+        
+                    # Tokenize and print the length
+                    tokenized_length = len(tokenizer.encode(data_item['query']))
+                    if tokenized_length == tokenizer.model_max_length:
+                        num_max_length += 1
+                        print(f"Line {idx} has a tokenized length of: {tokenized_length}")
+    
                 except JSONDecodeError:
                     print(idx, line)
                     continue
-        
+            print("num max length: %d" % num_max_length)
         # logging.warning("Formatting inputs...")
         prompt_input, prompt_no_input = PROMPT_DICT["prompt_input"], PROMPT_DICT["prompt_no_input"]
         # print(list_data_dict[0])
@@ -167,10 +175,11 @@ if __name__ == '__main__':
     train_dataset = data_module['train_dataset']
     data_collator = data_module['data_collator']
 
-    batch_size = 32
+    batch_size = 64
     dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=data_collator)
 
-    # 步骤 3: 查看每个批次
+    model_max_length = training_args.model_max_length
+    total = []
     for batch in dataloader:
         input_ids = batch['input_ids']
         labels = batch['labels']
@@ -178,5 +187,8 @@ if __name__ == '__main__':
     
         print("Batch size:", input_ids.size(0))  # 批次的大小
         print("Max sequence length in this batch:", input_ids.size(1))  # 批次中的最大序列长度（考虑了填充）
-        print("Attention Mask:", attention_mask)
+        total.append(input_ids.size(1))
+        # print("Attention Mask:", attention_mask)
         print("----------")
+    
+    print(sum(t == model_max_length for t in total))
