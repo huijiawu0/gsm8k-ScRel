@@ -7,12 +7,28 @@ ANS_RE = re.compile(r"#### (\-?[0-9\.\,]+)")
 INVALID_ANS = "[invalid]"
 
 
+def extract_answer2(completion):
+    if completion.find('\u0000') >= 0:
+        completion = completion[0:completion.find('\u0000')]
+    match = ANS_RE.search(completion)
+    if match:
+        match_str = match.group(0).strip().split('####')[1]
+        match_str = match_str.replace(",", "")
+        try:
+            float(match_str)
+        except BaseException:
+            return INVALID_ANS
+        return match_str
+    else:
+        return INVALID_ANS
+
+
 def extract_answer(completion):
     if completion.find('\u0000') >= 0:
         completion = completion[0:completion.find('\u0000')]
     match = ANS_RE.search(completion)
     if match:
-        match_str = match.group(0).strip()
+        match_str = match.group(1).strip()
         match_str = match_str.replace(",", "")
         try:
             float(match_str)
@@ -27,7 +43,7 @@ def parse_gold(lines):
     all_ans = []
     for line in lines:
         try:
-            ans = extract_answer(json.loads(line)['response'])
+            ans = extract_answer2(json.loads(line)['response'])
         except BaseException:
             print(line)
             ans = extract_answer(json.loads(line)['answer'])
