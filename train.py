@@ -17,7 +17,6 @@ import os
 import copy
 import logging
 from dataclasses import dataclass, field
-from json import JSONDecodeError
 from typing import Optional, Dict, Sequence
 import io
 import torch
@@ -45,13 +44,17 @@ def jload(f, mode="r"):
 IGNORE_INDEX = -100
 DEFAULT_PAD_TOKEN = "[PAD]"
 DEFAULT_EOS_TOKEN = "</s>"
-DEFAULT_BOS_TOKEN = "<s>"
-DEFAULT_UNK_TOKEN = "<unk>"
+DEFAULT_BOS_TOKEN = "</s>"
+DEFAULT_UNK_TOKEN = "</s>"
 PROMPT_DICT = {
     "prompt_input": (
+        "Below is an instruction that describes a task, paired with an input that provides further context. "
+        "Write a response that appropriately completes the request.\n\n"
         "### Instruction:\n{instruction}\n\n### Input:\n{input}\n\n### Response:"
     ),
     "prompt_no_input": (
+        "Below is an instruction that describes a task. "
+        "Write a response that appropriately completes the request.\n\n"
         "### Instruction:\n{instruction}\n\n### Response:"
     ),
 }
@@ -160,14 +163,8 @@ class SupervisedDataset(Dataset):
         except BaseException:
             with open(data_path, 'r') as f:
                 lines = f.readlines()
-            list_data_dict = []
-            for idx, line in enumerate(lines):
-                try:
-                    list_data_dict.append(json.loads(line.strip()))
-                except JSONDecodeError:
-                    print(idx, line)
-                    continue
-
+            list_data_dict = [json.loads(line.strip()) for line in lines]
+        
         # logging.warning("Formatting inputs...")
         prompt_input, prompt_no_input = PROMPT_DICT["prompt_input"], PROMPT_DICT["prompt_no_input"]
         # print(list_data_dict[0])
