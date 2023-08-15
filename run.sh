@@ -23,10 +23,7 @@ CUDA_VISIBLE_DEVICES=0,1 python3 -m torch.distributed.launch --master_addr ${MAS
     --warmup_ratio 0.03 \
     --lr_scheduler_type "cosine" \
     --logging_steps 1 \
-    --fsdp "full_shard auto_wrap offload" \
+    --fsdp "full_shard auto_wrap" \
     --fsdp_transformer_layer_cls_to_wrap 'LlamaDecoderLayer' \
     --tf32 True \
-    --gradient_checkpointing True \
-    --dataloader_num_workers 8 \
-    --model_max_length 1024
-
+    --gradient_checkpointing True
