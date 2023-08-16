@@ -11,8 +11,8 @@ CUDA_VISIBLE_DEVICES=0,1 python3 -m torch.distributed.launch --master_addr ${MAS
     --bf16 True \
     --output_dir $SAVE_PATH \
     --num_train_epochs 1 \
-    --per_device_train_batch_size 64 \
-    --per_device_eval_batch_size 64 \
+    --per_device_train_batch_size 32 \
+    --per_device_eval_batch_size 32 \
     --gradient_accumulation_steps 16 \
     --evaluation_strategy "no" \
     --save_strategy "steps" \
@@ -26,7 +26,4 @@ CUDA_VISIBLE_DEVICES=0,1 python3 -m torch.distributed.launch --master_addr ${MAS
     --fsdp "full_shard auto_wrap" \
     --fsdp_transformer_layer_cls_to_wrap 'LlamaDecoderLayer' \
     --tf32 True \
-    --gradient_checkpointing True \
-    --dataloader_num_workers 8 \
-    --model_max_length 1024
-
+    --gradient_checkpointing True
